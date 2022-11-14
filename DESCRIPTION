@@ -1,0 +1,5 @@
+Package: ARscore
+Type: Package
+Title: Aggregate Reactivity Score for PhIP-Seq data
+Version: 0.1.0
+RoxygenNote: 7.2.1
