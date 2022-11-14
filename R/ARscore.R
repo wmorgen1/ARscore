@@ -11,20 +11,62 @@ library(janitor)
 ## Common functions
 ####################################################################
 
+#' Left Right function to paste two strings
+#'
+#' @param left string
+#' @param right string
+#'
+#' @return concatenated string
+#' @export
+#'
 `%+%` <- function(left,right){
   return(paste0(left,right))
 }
 
+#' Left Right function to evaluate NOT left %in% right
+#'
+#' @param left vector
+#' @param right vector
+#'
+#' @return binary vector
+#' @export
+#'
+#' @import tidyverse
 `%nin%` <- function(left,right) {
   return(!(left %in% right))
 }
 
+#' function to evaluate NOT is.na
+#'
+#' @param target vector
+#'
+#' @return binary vector
+#' @export
+#'
 nna <- function(target) {return(!is.na(target))}
 
 ####################################################################
 ## Functions for Score Calculation
 ####################################################################
 
+#' Function to calculate aggregate reactivity scores
+#'
+#' Distributions are created by randomly selecting peptides
+#' that were designed to viruses that are not the targets of
+#' significant antibody responses
+#'
+#' @param norm_log dataframe containing intermediate reactivity metrics
+#' @param all_peptide_fcs dataframe containing all peptide fold changes 
+#' for an individual antibody profile
+#' @param positives dataframe containing viruses determined to be 
+#' significantly targeted by antibodies and therefore excluded from
+#' random selection
+#'
+#' @return dataframe containing aggregate reactivity scores and data on 
+#' random distributions
+#' 
+#'
+#' @import tidyverse fitdistrplus
 calc_scores <- function(norm_log, all_peptide_fcs, positives) {
   print("running ARscore algorithm")
   
@@ -94,6 +136,24 @@ calc_scores <- function(norm_log, all_peptide_fcs, positives) {
   return(norm_log)
 }
 
+
+#' Shell function to iterate calculations of aggregate reactivity scores
+#'
+#' @param norm_log_1 dataframe containing intermediate reactivity metrics
+#' @param all_peptide_fcs_1 dataframe containing all peptide fold changes 
+#' for an individual antibody profile
+#' @param max_iterations integer limiting the number of itererations to run
+#' calc_scores. defaults to 10
+#' @param p_cutoff numeric -log10 p value cutoff to determine significant  
+#' targets of antibody reactivity. defaults to 4
+#' @param score_cutoff numeric aggregate reactivity score cutoff to determine
+#' signifiant targets of antibody reactivity. defaults to .72 the empircally 
+#' determined threshold for VRC VirScan data. Recommended to adjust
+#'
+#' @return returns aggregate reactivity scores as well as a list denoting the
+#' significant targets of reactivity detected during each iteration
+#' 
+#'
 iterative_scores <- function(norm_log_1, all_peptide_fcs_1, max_iterations = 10,
                               p_cutoff = -log10(.001), score_cutoff = .72) {
   iterations = 0
@@ -125,6 +185,28 @@ iterative_scores <- function(norm_log_1, all_peptide_fcs_1, max_iterations = 10,
   return(outputs) 
 }
 
+#' Calculate Aggregate Reactivity Scores
+#'
+#' @param hfc a dataframe containing hits fold change data from a PhIP-Seq
+#' experiment. Used to exclude peptides that are reactive in beads only controls
+#' @param fc a dataframe containing fold change data from a PhIP-Seq experiment.
+#' Used to generate intermediate reactivity metrics, null distributions, and 
+#' ARscores
+#' @param set_max_iterations integer limiting the number of itererations to run
+#' calc_scores. defaults to 10
+#' @param set_p_cutoff numeric -log10 p value cutoff to determine significant  
+#' targets of antibody reactivity. defaults to 4
+#' @param set_score_cutoff numeric aggregate reactivity score cutoff to 
+#' determine signifiant targets of antibody reactivity. defaults to .72 the 
+#' empircally determined threshold for VRC VirScan data. Recommended to adjust
+#' @param required_number_of_peptides integer that represents the minimum number
+#' of peptides attributed to an antigen/pathogen required to calculate an 
+#' ARscore
+#'
+#' @return a dataframe containing the aggregate reactivity scores for a PhIP run
+#' @export
+#'
+#'
 ARscore_algorithm <- function(hfc, fc, set_max_iterations = 10,
                                set_p_cutoff = -log10(.001), set_score_cutoff = .72,
                                required_number_of_peptides = 50) {
