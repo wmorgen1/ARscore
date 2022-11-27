@@ -4,7 +4,7 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-Phage immunoprecipitation sequencing (PhIP-Seq) is a massively
+Phage ImmunopreciPitation Sequencing (PhIP-Seq) is a massively
 multiplexed method for quantifying antibody reactivity to libraries of
 peptides. PhIP-seq analyses begin by identifying enriched antibody
 reactivity to individual peptides. However, studies frequently require
@@ -13,15 +13,14 @@ understanding of aggregate reactivity to whole antigens or pathogens.
 reactivity to groups of peptides.
 
 `ARscore` generates aggregate reactivity scores (ARscores) by comparing
-an intermediate reactivity metric from a group of peptides to
-distributions of intermediate reactivity metrics from randomly selected
-peptides, using
+the average log fold change from a group of peptides to distributions of
+average log fold change from randomly selected peptides, using
 [`fitdistrplus`](https://cran.r-project.org/web/packages/fitdistrplus/index.html)[^1]
 and
 [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html)[^2].
 To expedite computation and evaluate extreme reactivity scores, random
 distributions are modeled as gamma distributions with paramaters that
-change linearly with the number of selected peptides.
+change linearly with the number of randomly selected peptides.
 
 ARscore was initially implemented with VirScan (a PhIP-Seq library of
 viral peptides) to create a virus level reactivity metric (Viral
@@ -30,7 +29,7 @@ ARscore, VARscore), using peptide enrichments determined with
 standard pipeline for identifying differential expression from read
 count data[^3][^4][^5].
 
-v 0.1.0 requires Larman Lab naming conventions for mock IP controls,
+v 0.2.0 requires Larman Lab naming conventions for mock IP controls,
 samples, and peptide annotations. Peptide grouping is currently based on
 library design.
 
