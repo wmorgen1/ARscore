@@ -4,7 +4,7 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-Phage ImmunopreciPitation Sequencing (PhIP-Seq) is a massively
+Phage ImmunoPrecipitation Sequencing (PhIP-Seq) is a massively
 multiplexed method for quantifying antibody reactivity to libraries of
 peptides. PhIP-seq analyses begin by identifying enriched antibody
 reactivity to individual peptides. However, studies frequently require
