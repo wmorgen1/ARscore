@@ -1,0 +1,53 @@
+---
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# ARscore
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+Phage ImmunoPrecipitation Sequencing (PhIP-Seq) is a massively multiplexed method for quantifying antibody reactivity to libraries of peptides. PhIP-seq analyses begin by identifying enriched antibody reactivity to individual peptides. However, studies frequently require understanding of aggregate reactivity to whole antigens or pathogens. `ARscore` provides a standardized approach for calculating aggregate reactivity to groups of peptides. 
+
+`ARscore` generates aggregate reactivity scores (ARscores) by comparing the average log fold change from a group of peptides to distributions of average log fold change from randomly selected peptides, using [`fitdistrplus`](https://cran.r-project.org/web/packages/fitdistrplus/index.html)[^fitdistrplus] and [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html)[^limma]. To expedite computation and evaluate extreme reactivity scores, random distributions are modeled as gamma distributions with paramaters that change linearly with the number of randomly selected peptides.
+
+[^fitdistrplus]: Delignette-Muller ML, Dutang C (2015). fitdistrplus: An R Package for Fitting Distributions. Journal of Statistical Software, 64(4), 1–34.
+[^limma]: Ritchie ME, Phipson B, Wu D, Hu Y, Law CW, Shi W, Smyth GK (2015). limma powers differential expression analyses for RNA-sequencing and microarray studies. Nucleic Acids Research, 43(7), e47.
+
+ARscore was initially implemented with VirScan (a PhIP-Seq library of viral peptides) to create a virus level reactivity metric (Viral ARscore, VARscore), using peptide enrichments determined with [`edgeR`](https://bioconductor.org/packages/release/bioc/html/edgeR.html)'s standard pipeline for identifying differential expression from read count data[^edgeRBioc][^edgeRDE][^edgeRF].
+
+[^edgeRBioc]: Robinson MD, McCarthy DJ and Smyth GK (2010). edgeR: a Bioconductor package for differential expression analysis of digital gene expression data. Bioinformatics 26, 139-140
+[^edgeRDE]: McCarthy DJ, Chen Y and Smyth GK (2012). Differential expression analysis of multifactor RNA-Seq experiments with respect to biological variation. Nucleic Acids Research 40, 4288-4297
+[^edgeRF]: Chen Y, Lun ATL, Smyth GK (2016). From reads to genes to pathways: differential expression analysis of RNA-Seq experiments using Rsubread and the edgeR quasi-likelihood pipeline. F1000Research 5, 1438
+
+v 0.2.0 requires Larman Lab naming conventions for mock IP controls, samples, and peptide annotations. Peptide grouping is currently based on library design.
+
+For more information, see the package vignette using `browseVignettes("ARscore")`.
+
+## Installation
+
+### `ARscore`
+
+To install the package:
+
+```{r install_ARscore, eval = FALSE}
+if(!requireNamespace("remotes")) install.packages("remotes")
+
+remotes::install_github("wmorgen1/ARscore")
+```
+
+To load the package:
+
+```{r load_ARscore, include = TRUE, results = "hide", message = FALSE, warning = FALSE, eval = FALSE}
+library(ARscore)
+```
+
