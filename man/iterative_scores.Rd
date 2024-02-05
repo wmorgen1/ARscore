@@ -8,8 +8,9 @@ iterative_scores(
   norm_log_1,
   all_peptide_fcs_1,
   max_iterations = 10,
-  p_cutoff = -log10(0.001),
-  score_cutoff = 0.72
+  p_cutoff = -log10(1e-04),
+  score_cutoff = 2,
+  exclusion_method_1 = "genus"
 )
 }
 \arguments{
@@ -25,13 +26,16 @@ calc_scores. defaults to 10}
 targets of antibody reactivity. defaults to 4}
 
 \item{score_cutoff}{numeric aggregate reactivity score cutoff to determine
-signifiant targets of antibody reactivity. defaults to .72 the empircally 
+signifiant targets of antibody reactivity. defaults to 2 the empircally 
 determined threshold for VRC VirScan data. Recommended to adjust}
+
+\item{exclusion_method_1}{string describing method for excluding likely reactive
+peptides. Defaults to by genus unless exclusion_method = 'group' or 'species"}
 }
 \value{
 returns aggregate reactivity scores as well as a list denoting the
 significant targets of reactivity detected during each iteration
 }
 \description{
-Shell function to iterate calculations of aggregate reactivity scores
+v 1.0 update - two internal hit criteria are now used
 }

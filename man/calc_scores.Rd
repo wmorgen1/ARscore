@@ -4,7 +4,7 @@
 \alias{calc_scores}
 \title{Function to calculate aggregate reactivity scores}
 \usage{
-calc_scores(norm_log, all_peptide_fcs, positives)
+calc_scores(norm_log, all_peptide_fcs, positives, exclusion_method = "genus")
 }
 \arguments{
 \item{norm_log}{dataframe containing intermediate reactivity metrics}
@@ -15,6 +15,9 @@ for an individual antibody profile}
 \item{positives}{dataframe containing viruses determined to be 
 significantly targeted by antibodies and therefore excluded from
 random selection}
+
+\item{exclusion_method}{string describing method for excluding likely reactive
+peptides. Defaults to by genus unless exclusion_method = 'group' or 'species"}
 }
 \value{
 dataframe containing aggregate reactivity scores and data on 
@@ -28,4 +31,6 @@ significant antibody responses
 \details{
 v 0.2.1 update - changed linear models to splines for interpolating
 intermediate values of peptides
+v 1.0 update - reduced length of 'representations' to expedite computation
+ - fold changes are no longer log transformed
 }

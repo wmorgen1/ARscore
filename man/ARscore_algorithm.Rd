@@ -5,17 +5,19 @@
 \title{Calculate Aggregate Reactivity Scores}
 \usage{
 ARscore_algorithm(
-  hfc,
+  hfc = NULL,
   fc,
   set_max_iterations = 10,
-  set_p_cutoff = -log10(0.001),
-  set_score_cutoff = 0.72,
-  required_number_of_peptides = 50
+  set_p_cutoff = -log10(1e-04),
+  set_score_cutoff = 2,
+  required_number_of_peptides = 50,
+  exclusion_method = "genus"
 )
 }
 \arguments{
 \item{hfc}{a dataframe containing hits fold change data from a PhIP-Seq
-experiment. Used to exclude peptides that are reactive in beads only controls}
+experiment. Used to exclude peptides that are reactive in beads only controls.
+If left NULL, no peptides will be excluded}
 
 \item{fc}{a dataframe containing fold change data from a PhIP-Seq experiment.
 Used to generate intermediate reactivity metrics, null distributions, and 
@@ -28,16 +30,27 @@ calc_scores. defaults to 10}
 targets of antibody reactivity. defaults to 4}
 
 \item{set_score_cutoff}{numeric aggregate reactivity score cutoff to 
-determine signifiant targets of antibody reactivity. defaults to .72 the 
+determine signifiant targets of antibody reactivity. defaults to 2 the 
 empircally determined threshold for VRC VirScan data. Recommended to adjust}
 
 \item{required_number_of_peptides}{integer that represents the minimum number
 of peptides attributed to an antigen/pathogen required to calculate an 
 ARscore}
+
+\item{exclusion_method}{string describing method for excluding likely reactive
+peptides. Defaults to by genus unless exclusion_method = 'group' or 'species"}
 }
 \value{
 a dataframe containing the aggregate reactivity scores for a PhIP run
 }
 \description{
-Calculate Aggregate Reactivity Scores
+v 1.0 update - reduced length of 'representations' to expedite computation
+ - fold changes are no longer log transformed
+ - additional internal positive criteria added
+ - default thresholds changed to reflect shift to linear fcs
+ - option to leave hfc as null
+ - added option to choose peptide exclusion method
+ 
+ If custom peptide groupings are desired, replace the taxon_species column
+ with desired peptide grouping variable
 }
