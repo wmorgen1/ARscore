@@ -20,12 +20,15 @@ toxscan_fc <- ARscore::example_toxscan_fc
 VARscores <- ARscore_algorithm(hfc = virscan_hfc, fc = virscan_fc)
 TARscores <- ARscore_algorithm(hfc = toxscan_hfc, fc = toxscan_fc)
 
+TARscores_2 <- ARscore_algorithm(hfc = toxscan_hfc, fc = toxscan_fc,
+                               exclusion_method = "group")
+
 #############
-## make wide (if many samples were run)
+## make wide if that is preffered format
 #############
 
 p_wide <- VARscores %>% ungroup() %>% dplyr::select(taxon_genus, taxon_species, total_peps, p_val, sample_id) %>% 
   pivot_wider(names_from = sample_id, values_from = p_val)
-VARscore_wide <- VARscores %>% ungroup() %>% dplyr::select(taxon_genus, taxon_species, total_peps, vir_score, sample_id) %>% 
-  pivot_wider(names_from = sample_id, values_from = vir_score)
+VARscore_wide <- VARscores %>% ungroup() %>% dplyr::select(taxon_genus, taxon_species, total_peps, ARscore, sample_id) %>% 
+  pivot_wider(names_from = sample_id, values_from = ARscore)
 
