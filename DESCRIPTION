@@ -1,8 +1,5 @@
 Package: ARscore
 Type: Package
 Title: Aggregate Reactivity Score for PhIP-Seq data
-Version: 0.2.1
+Version: 1.0
 RoxygenNote: 7.2.3
-Depends: 
-    R (>= 2.10)
-LazyData: true
