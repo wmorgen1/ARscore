@@ -57,6 +57,8 @@ nna <- function(target) {return(!is.na(target))}
 #' 
 #' v 0.2.1 update - changed linear models to splines for interpolating
 #' intermediate values of peptides
+#' v 1.0 update - reduced length of 'representations' to expedite computation
+#'  - fold changes are no longer log transformed
 #'
 #' @param norm_log dataframe containing intermediate reactivity metrics
 #' @param all_peptide_fcs dataframe containing all peptide fold changes 
@@ -64,28 +66,35 @@ nna <- function(target) {return(!is.na(target))}
 #' @param positives dataframe containing viruses determined to be 
 #' significantly targeted by antibodies and therefore excluded from
 #' random selection
+#' @param exclusion_method string describing method for excluding likely reactive
+#' peptides. Defaults to by genus unless exclusion_method = 'group' or 'species"
 #'
 #' @return dataframe containing aggregate reactivity scores and data on 
 #' random distributions
 #' 
 #'
 #' @import tidyverse fitdistrplus
-calc_scores <- function(norm_log, all_peptide_fcs, positives) {
+calc_scores <- function(norm_log, all_peptide_fcs, positives, exclusion_method = "genus") {
   print("running ARscore algorithm")
   
   representations <- c(
-    30, 42, 60, 85, 120, 170, 240,
-    340, 480, 679, 960, 1358, 1960,
-    2715, 3920, 5431, 7840
+    30, 60, 120, 240,
+    480, 960, 1960,
+    3920, 7840
     #, 2715, 3920, 5431, 7840 not needed for monkey virus, toxome
     #, 15680 only needed for arboscan
   )
   
-  all_peptide_fcs <- all_peptide_fcs %>% mutate(fc = log2(value))
+  all_peptide_fcs <- all_peptide_fcs %>% mutate(fc = (value))
   
-  all_peptide_fcs <- all_peptide_fcs %>% 
-    filter(taxon_genus %nin% positives$taxon_genus)
   
+  if(exclusion_method == "species" | exclusion_method == "group"){
+    all_peptide_fcs <- all_peptide_fcs %>% 
+      filter(taxon_species %nin% positives$taxon_species)
+  } else {
+    all_peptide_fcs <- all_peptide_fcs %>% 
+      filter(taxon_genus %nin% positives$taxon_genus)
+  }
   
   distributions <- data.frame(matrix(nrow = length(representations), ncol = 1000))
   row.names(distributions) <- representations
@@ -135,9 +144,9 @@ calc_scores <- function(norm_log, all_peptide_fcs, positives) {
   
   # calculate scores and p values
   norm_log <- norm_log %>%
-    mutate(vir_score = zscoreGamma(score_norm, shape = shape / sqrt(total_peps), rate = rate / sqrt(total_peps)),
+    mutate(ARscore = zscoreGamma(score_norm, shape = shape / sqrt(total_peps), rate = rate / sqrt(total_peps)),
            virus_fc = score_norm / mean) %>%
-    mutate(vir_score = ifelse(vir_score < -10, -10, vir_score)) %>%
+    mutate(ARscore = ifelse(ARscore < -10, -10, ARscore)) %>%
     mutate(p_val = -log10((1-pnorm(abs(zscoreGamma(score_norm, shape = shape, rate = rate)))))) %>%
     mutate(p_val = ifelse(p_val>15, 15, p_val))
   
@@ -147,6 +156,8 @@ calc_scores <- function(norm_log, all_peptide_fcs, positives) {
 
 #' Shell function to iterate calculations of aggregate reactivity scores
 #'
+#' v 1.0 update - two internal hit criteria are now used
+#'
 #' @param norm_log_1 dataframe containing intermediate reactivity metrics
 #' @param all_peptide_fcs_1 dataframe containing all peptide fold changes 
 #' for an individual antibody profile
@@ -155,15 +166,18 @@ calc_scores <- function(norm_log, all_peptide_fcs, positives) {
 #' @param p_cutoff numeric -log10 p value cutoff to determine significant  
 #' targets of antibody reactivity. defaults to 4
 #' @param score_cutoff numeric aggregate reactivity score cutoff to determine
-#' signifiant targets of antibody reactivity. defaults to .72 the empircally 
+#' signifiant targets of antibody reactivity. defaults to 2 the empircally 
 #' determined threshold for VRC VirScan data. Recommended to adjust
+#' @param exclusion_method_1 string describing method for excluding likely reactive
+#' peptides. Defaults to by genus unless exclusion_method = 'group' or 'species"
 #'
 #' @return returns aggregate reactivity scores as well as a list denoting the
 #' significant targets of reactivity detected during each iteration
 #' 
 #' @import tidyverse limma
 iterative_scores <- function(norm_log_1, all_peptide_fcs_1, max_iterations = 10,
-                              p_cutoff = -log10(.001), score_cutoff = .72) {
+                             p_cutoff = -log10(.0001), score_cutoff = 2,
+                             exclusion_method_1 = "genus") {
   iterations = 0
   positives_1 = norm_log_1 %>% filter(F)
   positives_output = list()
@@ -171,10 +185,14 @@ iterative_scores <- function(norm_log_1, all_peptide_fcs_1, max_iterations = 10,
   
   while(iterations < max_iterations) {
     print("iteration " %+% (iterations+1))
-    scores <- calc_scores(norm_log = norm_log_1, all_peptide_fcs = all_peptide_fcs_1, positives = positives_1)
+    scores <- calc_scores(norm_log = norm_log_1, all_peptide_fcs = all_peptide_fcs_1, positives = positives_1,
+                          exclusion_method = exclusion_method_1)
     
     #update variables
-    positives_1 <- scores %>% filter(p_val > p_cutoff) %>% filter(vir_score > score_cutoff)
+    positives_2 <- scores %>% filter(p_val == 15) %>% filter(vir_score > 0) #12/02/23 added second internal criteria
+    positives_1 <- scores %>% filter(p_val > p_cutoff) %>% filter(ARscore > score_cutoff) %>% full_join(positives_2, 
+                            join_by(taxon_species, taxon_genus, sample_id, total_peps, score, score_norm, shape, 
+                            rate, mean, variance, ARscore, virus_fc, p_val))
     positives_output[[iterations+1]] <- positives_1 
     
     #add break if no new positives
@@ -195,8 +213,19 @@ iterative_scores <- function(norm_log_1, all_peptide_fcs_1, max_iterations = 10,
 
 #' Calculate Aggregate Reactivity Scores
 #'
+#'v 1.0 update - reduced length of 'representations' to expedite computation
+#'  - fold changes are no longer log transformed
+#'  - additional internal positive criteria added
+#'  - default thresholds changed to reflect shift to linear fcs
+#'  - option to leave hfc as null
+#'  - added option to choose peptide exclusion method
+#'  
+#'  If custom peptide groupings are desired, replace the taxon_species column
+#'  with desired peptide grouping variable
+#'
 #' @param hfc a dataframe containing hits fold change data from a PhIP-Seq
-#' experiment. Used to exclude peptides that are reactive in beads only controls
+#' experiment. Used to exclude peptides that are reactive in beads only controls.
+#' If left NULL, no peptides will be excluded
 #' @param fc a dataframe containing fold change data from a PhIP-Seq experiment.
 #' Used to generate intermediate reactivity metrics, null distributions, and 
 #' ARscores
@@ -205,39 +234,58 @@ iterative_scores <- function(norm_log_1, all_peptide_fcs_1, max_iterations = 10,
 #' @param set_p_cutoff numeric -log10 p value cutoff to determine significant  
 #' targets of antibody reactivity. defaults to 4
 #' @param set_score_cutoff numeric aggregate reactivity score cutoff to 
-#' determine signifiant targets of antibody reactivity. defaults to .72 the 
+#' determine signifiant targets of antibody reactivity. defaults to 2 the 
 #' empircally determined threshold for VRC VirScan data. Recommended to adjust
 #' @param required_number_of_peptides integer that represents the minimum number
 #' of peptides attributed to an antigen/pathogen required to calculate an 
 #' ARscore
+#' @param exclusion_method string describing method for excluding likely reactive
+#' peptides. Defaults to by genus unless exclusion_method = 'group' or 'species"
 #'
 #' @return a dataframe containing the aggregate reactivity scores for a PhIP run
 #' @export
 #'
 #' @import tidyverse fitdistrplus limma
-ARscore_algorithm <- function(hfc, fc, set_max_iterations = 10,
-                               set_p_cutoff = -log10(.001), set_score_cutoff = .72,
-                               required_number_of_peptides = 50) {
+ARscore_algorithm <- function(hfc = NULL, fc, set_max_iterations = 10,
+                               set_p_cutoff = -log10(.0001), set_score_cutoff = 2,
+                               required_number_of_peptides = 50,
+                              exclusion_method = "genus") {
   
   ## peptides that have hits in beads
-  bad_beads <- hfc %>% dplyr::select(pep_aa,contains('BEADS')) %>% pivot_longer(-pep_aa) %>%
-    filter(value > 1) %>% dplyr::select(pep_aa) %>% pull
-  
-  ### fold change ###
-  d1 <- fc
-  
-  ## make longform dataframe out of fc, floor fc at 1
-  d2 <- d1 %>% filter(pep_aa %nin% bad_beads) %>% 
-    dplyr::select(-contains('BEADS')) %>%
-    #common pulldowns. Has to be edited in some screens
-    pivot_longer(cols = c(contains('20A20G'), contains('20S'),
-                          contains('ugIg'), contains('DPI')),names_to = 'sample_id') %>%
-    mutate(value = ifelse(value<1,1,value))
+  if(!is.null(hfc)){
+    bad_beads <- hfc %>% dplyr::select(pep_aa,contains('BEADS'),contains('Beads'),contains('beads')) %>% pivot_longer(-pep_aa) %>%
+      filter(value > 1) %>% dplyr::select(pep_aa) %>% pull
+    
+    ### fold change ###
+    d1 <- fc
+    
+    ## make longform dataframe out of fc, no longer floored fc at 1
+    d2 <- d1 %>% filter(pep_aa %nin% bad_beads) %>% 
+      dplyr::select(-contains('BEADS'),contains('Beads'),contains('beads')) %>%
+      #common pulldowns. Has to be edited in some screens
+      pivot_longer(cols = c(contains('20A20G'), contains('20S'),
+                            contains('ugIg'), contains('DPI'),
+                            contains('IgA'), contains('-')),names_to = 'sample_id')
+    
+  } else {
+    
+    ### fold change ###
+    d1 <- fc
+    
+    ## make longform dataframe out of fc, no longer floored fc at 1
+    d2 <- d1 %>% 
+      dplyr::select(-contains('BEADS'),contains('Beads'),contains('beads')) %>%
+      #common pulldowns. Has to be edited in some screens
+      pivot_longer(cols = c(contains('20A20G'), contains('20S'),
+                            contains('ugIg'), contains('DPI'),
+                            contains('IgA'), contains('-')),names_to = 'sample_id')
+    
+  }
   
   ids <- d2 %>% dplyr::select(sample_id) %>% unique()
   
   # need to group by taxon_species, sample_id and count number of reactivities. Then add back sample annotations 
-  d4 <- d2 %>% group_by(taxon_species, taxon_genus, sample_id) %>% summarise(score = sum(log2(value))) %>% left_join(ids)
+  d4 <- d2 %>% group_by(taxon_species, taxon_genus, sample_id) %>% summarise(score = sum((value))) %>% left_join(ids)
   d4_2 <- d2 %>% group_by(taxon_species, taxon_genus, sample_id) %>% summarise(total_peps = n()) %>%
     left_join(ids) %>% left_join(d4) %>% mutate(score = ifelse(is.na(score), 0, score))
   d4_2 <- d4_2 %>% mutate(score_norm = score / total_peps) %>% filter(total_peps >= required_number_of_peptides)
@@ -254,7 +302,8 @@ ARscore_algorithm <- function(hfc, fc, set_max_iterations = 10,
                                               all_peptide_fcs_1 = d2 %>% filter(sample_id == ids$sample_id[R]),
                                               max_iterations = set_max_iterations,
                                               p_cutoff = set_p_cutoff, 
-                                              score_cutoff = set_score_cutoff)
+                                              score_cutoff = set_score_cutoff,
+                                              exclusion_method_1 = exclusion_method)
     
   }
   
@@ -265,6 +314,10 @@ ARscore_algorithm <- function(hfc, fc, set_max_iterations = 10,
     scores <- rbind(scores, algorithm_output[[i]][[1]])
   }
   }
+  
+  scores <- scores %>% dplyr::select(taxon_species, taxon_genus, sample_id,
+                                     total_peps, score_norm, 
+                                     ARscore, p_val)
   
   return(scores)
 }
