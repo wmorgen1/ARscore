@@ -189,7 +189,7 @@ iterative_scores <- function(norm_log_1, all_peptide_fcs_1, max_iterations = 10,
                           exclusion_method = exclusion_method_1)
     
     #update variables
-    positives_2 <- scores %>% filter(p_val == 15) %>% filter(vir_score > 0) #12/02/23 added second internal criteria
+    positives_2 <- scores %>% filter(p_val == 15) %>% filter(ARscore > 0) #12/02/23 added second internal criteria
     positives_1 <- scores %>% filter(p_val > p_cutoff) %>% filter(ARscore > score_cutoff) %>% full_join(positives_2, 
                             join_by(taxon_species, taxon_genus, sample_id, total_peps, score, score_norm, shape, 
                             rate, mean, variance, ARscore, virus_fc, p_val))
